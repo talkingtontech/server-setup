@@ -12,14 +12,19 @@ numdays=14
 # Full path for MySQL hotcopy command
 # Please put credentials into /root/.my.cnf
 #hotcopycmd=/usr/bin/mysqlhotcopy
-hotcopycmd="/usr/bin/mysqldump --lock-tables --databases"
+hotcopycmd="mysqldump --lock-tables --databases"
+gzipcmd="gzip"
 
 # Backup date format
 backupdate=`date +_%Y%m%d_%H%M`
 
+# Permissions
+dmode=0700
+fmode=600
+
 # Create directory if needed
-mkdir -p "$backupdir"
-if [ ! -d "$backupdir" ]; then
+mkdir -m $dmode -p $backupdir/ 
+if [ ! -d $backupdir ]; then
   echo "Invalid directory: $backupdir"
   exit 1
 fi
@@ -30,7 +35,10 @@ RC=0
 for database in $dblist; do
   echo
   echo "Dumping $database..."
-  $hotcopycmd $database | gzip > "$backupdir/$database$backupdate.sql.gz"
+  echo "$hotcopycmd $database | $gzipcmd > $backupdir/$database$backupdate.sql.gz"
+  $hotcopycmd $database | $gzipcmd > "$backupdir/$database$backupdate.sql.gz"
+  
+  chmod $fmode "$backupdir/$database$backupdate.sql.gz"
   
   RC=$?
   if [ $RC -gt 0 ]; then
@@ -44,11 +52,13 @@ if [ $RC -gt 0 ]; then
   exit $RC
 else
   echo "Removing Dumps Older Than $numdays Days..."
-  find "$backupdir/" -type f -ctime "+$numdays" -exec rm -f {} \; -print
+  echo "find $backupdir/ -type f -mtime +$numdays -print0 | xargs -0 rm -fv"
+  find $backupdir/ -type f -mtime +$numdays -print0 | xargs -0 rm -fv
   
   echo
   echo "Listing Backup Directory Contents..."
-  ls -la "$backupdir"
+  echo "ls -la $backupdir/"
+  ls -la $backupdir/
   
   echo
   echo "MySQL Dump is complete!"
