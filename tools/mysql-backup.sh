@@ -4,15 +4,17 @@
 dblist="db_name_1"
 
 # Directory for backups
-backupdir=/backups/mysql
+backupdir=/root/backups/mysql
 
-# Number of versions to keep
-numversions=14
+# Number of days to keep
+numdays=14
 
 # Full path for MySQL hotcopy command
 # Please put credentials into /root/.my.cnf
 #hotcopycmd=/usr/bin/mysqlhotcopy
 hotcopycmd="/usr/bin/mysqldump --lock-tables --databases"
+
+backupdate=`date +_%Y%m%d_%H%M`
 
 # Create directory if needed
 mkdir -p "$backupdir"
@@ -27,22 +29,16 @@ RC=0
 for database in $dblist; do
    echo
    echo "Dumping $database ..."
-   mv "$backupdir/$database.gz" "$backupdir/$database.0.gz" 2> /dev/null
-   $hotcopycmd $database | gzip > "$backupdir/$database.gz"
+   $hotcopycmd $database | gzip > "$backupdir/$database$backupdate.sql.gz"
 
    RC=$?
    if [ $RC -gt 0 ]; then
      continue;
    fi
-
-   # Rollover the backup directories
-   rm -fr "$backupdir/$database.$numversions.gz" 2> /dev/null
-   i=$numversions
-   while [ $i -gt 0 ]; do
-     mv "$backupdir/$database.`expr $i - 1`.gz" "$backupdir/$database.$i.gz" 2> /dev/null
-     i=`expr $i - 1`
-   done
 done
+
+echo "Removing Dumps Older Than $numdays Days..."
+find "$backupdir/" -type f -ctime "+$numdays" -exec rm -f {} \; -print
 
 echo
 if [ $RC -gt 0 ]; then
