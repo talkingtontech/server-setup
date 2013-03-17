@@ -9,12 +9,23 @@ backupdir=/root/backups/mysql
 # Number of days to keep
 numdays=14
 
-# Please put credentials into /root/.my.cnf
+# Put client credentials into $HOME/.my.cnf
 dumpcmd="mysqldump --lock-tables --databases"
 gzipcmd="gzip"
 
 # Backup date format
 backupdate=`date +_%Y%m%d_%H%M`
+
+# Sanity checks
+if [ ! -n "$dblist" ]; then
+  echo "Invalid DB List"
+  exit 1
+fi
+
+if [ ! -n "$backupdir" ]; then
+  echo "Invalid Backup Dir"
+  exit 1
+fi
 
 # Lock down permissions
 umask 077
@@ -29,6 +40,7 @@ fi
 # Hotcopy begins here
 echo "Dumping MySQL Databases..."
 RC=0
+
 for database in $dblist; do
   echo
   echo "Dumping $database..."
@@ -42,6 +54,7 @@ for database in $dblist; do
 done
 
 echo
+
 if [ $RC -gt 0 ]; then
   echo "MySQL Dump failed!"
   exit $RC
