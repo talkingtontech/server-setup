@@ -1,5 +1,5 @@
 #!/bin/sh
-# MySQL Backup Script v1.1.0
+# MySQL Backup Script v1.1.1
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # Space separated list of databases
@@ -60,12 +60,13 @@ if [ $RC -gt 0 ]; then
   echo "MySQL Dump failed!"
   exit $RC
 else
-  findcmd="find $backupdir -name *.sql.gz -type f -mtime +$numdays -print0 | xargs -0 rm -fv"
+  findcmd="find $backupdir -name \"*.sql.gz\" -type f -mtime +$numdays -print0"
+  findxargs="xargs -0 rm -fv"
   listcmd="ls -la $backupdir"
   
   echo "Removing Dumps Older Than $numdays Days..."
-  echo $findcmd
-  $findcmd
+  echo "$findcmd | $findxargs"
+  $findcmd | $findxargs
   
   echo
   echo "Listing Backup Directory Contents..."
