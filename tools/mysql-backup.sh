@@ -1,9 +1,11 @@
 #!/bin/sh
+# MySQL Backup Script v1.1.0
+# (c) 2013 Chris Talkington <chris@talkingontech.com>
 
-# List of databases to be backed up separated by space
+# Space separated list of databases
 dblist="db_name_1"
 
-# Directory for backups
+# Backup to this directory
 backupdir=/root/backups/mysql
 
 # Number of days to keep
@@ -31,13 +33,12 @@ fi
 umask 077
 
 # Create directory if needed
-mkdir -p $backupdir 
+mkdir -p -v $backupdir 
 if [ ! -d $backupdir ]; then
   echo "Invalid directory: $backupdir"
   exit 1
 fi
 
-# Hotcopy begins here
 echo "Dumping MySQL Databases..."
 RC=0
 
@@ -59,14 +60,17 @@ if [ $RC -gt 0 ]; then
   echo "MySQL Dump failed!"
   exit $RC
 else
+  findcmd="find $backupdir -name *.sql.gz -type f -mtime +$numdays -print0 | xargs -0 rm -fv"
+  listcmd="ls -la $backupdir"
+  
   echo "Removing Dumps Older Than $numdays Days..."
-  echo "find $backupdir -name *.sql.gz -type f -mtime +$numdays -print0 | xargs -0 rm -fv"
-  find $backupdir -name "*.sql.gz" -type f -mtime +$numdays -print0 | xargs -0 rm -fv
+  echo $findcmd
+  $findcmd
   
   echo
   echo "Listing Backup Directory Contents..."
-  echo "ls -la $backupdir"
-  ls -la $backupdir
+  echo $listcmd
+  $listcmd
   
   echo
   echo "MySQL Dump is complete!"
