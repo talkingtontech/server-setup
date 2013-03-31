@@ -1,5 +1,5 @@
 #!/bin/bash
-# IPTables Country Block Script v1.2.5
+# IPTables Country Block Script v1.2.6
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # block all traffic from ISO code (eg ch for China)
@@ -111,10 +111,9 @@ do
     ERROR "Invalid List Provider: $DLPROVIDER"
   fi
 
-  DEBUG $CACHETESTCMD
-
   if [ -f $tDB ]; then
     CACHETESTCMD="$FINDBIN $tDB -cmin +$ZONECACHEMIN"
+    DEBUG $CACHETESTCMD
 
     if test `$CACHETESTCMD`; then
       NOTICE "Updating $c zone cache"
@@ -124,9 +123,6 @@ do
     NOTICE "Creating $c zone cache"
     FORCERUNCMD $DLZONECMD
   fi
-
-  # country specific log message
-  SPAMDROPMSG="$c Country Drop"
 
   if [ -f $tDB ]; then
     BADIPS=$($EGREPBIN -v "^#|^$" $tDB)
