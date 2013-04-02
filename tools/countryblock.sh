@@ -1,5 +1,5 @@
 #!/bin/bash
-# IPTables Country Block Script v1.3.5
+# IPTables Country Block Script v1.4.2
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # block all traffic from ISO code (eg ch for China)
@@ -12,7 +12,7 @@ DLPROVIDER="ipdeny"
 #ALLOWPORTS=80,443
 
 # log drops?
-LOGDROP=true
+LOGDROP=false
 
 # are we debugging
 DEBUGME=false
@@ -33,9 +33,6 @@ ZONEROOTDIR=/tmp/countryblock
 # cache zones for this long
 ZONECACHEDAY=3
 
-# init IP counter
-IPCOUNT=0
-
 # iptables chain used for rules
 CBCHAIN="countryblock"
 
@@ -45,6 +42,59 @@ CBRESTORE="/etc/countryblock.rules"
 # where to get rules from
 DLROOTIPINFODB="http://ipinfodb.com/country_query.php"
 DLROOTIPDENY="http://www.ipdeny.com/ipblocks/data/countries"
+
+function USAGE() {
+cat << EOF
+usage: $0 options
+
+This script grabs a list of country IPs in CIDR format from database provider
+and then builds sets of octet optimized DROP rules for iptables.
+
+OPTIONS:
+  -h      Show this message
+  -c      Countries to block (ISO; lowercase, space seperated)
+  -d      Debug mode
+  -l      Log DROPs
+  -p      List Provider (ipdeny or ipinfodb) default: ipdeny
+  -t      Dryrun mode
+  -u      Force zone cache update
+EOF
+}
+
+while getopts "hc:dlp:tu" opt; do
+  case $opt in
+    h)
+      USAGE
+      exit 1
+      ;;
+    c)
+      ISO="$OPTARG"
+      ;;
+    d)
+      DEBUGME=true
+      ;;
+    l)
+      LOGDROP=true
+      ;;
+    p)
+      DLPROVIDER="$OPTARG"
+      ;;
+    t)
+      DRYRUNME=true
+      ;;
+    u)
+      ZONECACHEDAY=0
+      ;;
+    \?)
+      USAGE
+      exit
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
 
 function ERROR() {
   echo && echo "[error] $@"
@@ -56,7 +106,7 @@ function NOTICE() {
 }
 
 function DEBUG() {
-  if $DEBUGME; then
+  if [ $DEBUGME = true ]; then
     echo && echo $@
   fi
 }
@@ -64,7 +114,7 @@ function DEBUG() {
 function RUNCMD() {
   DEBUG $@
 
-  if ! $DRYRUNME; then
+  if [ $DRYRUNME = false ]; then
     $@
   fi
 }
@@ -86,7 +136,7 @@ function IPTCLEANUP() {
   RUNCMD $IPTBIN -F $CBCHAIN
   RUNCMD $IPTBIN -X $CBCHAIN
 
-  for i  in `$IPTBIN -L -n | grep Chain | cut -f 2 -d ' ' | grep '\-$CBCHAIN'`; do
+  for i in `$IPTBIN -L -n | grep Chain | cut -f 2 -d ' ' | grep '\-$CBCHAIN'`; do
     RUNCMD $IPTBIN -F ${i}
     RUNCMD $IPTBIN -X ${i}
   done
@@ -100,12 +150,15 @@ function UPDATEZONECACHE() {
       DLZONECMD="$WGETBIN -O $tDB $DLROOTIPDENY/$c.zone"
     elif [ $DLPROVIDER == "ipinfodb" ]; then
       DLZONECMD="$WGETBIN -O $tDB $DLROOTIPINFODB?country=$c"
-    else
-      ERROR "Invalid List Provider: $DLPROVIDER"
     fi
 
-    CACHECLEANCMD="$FINDBIN $tDB -ctime +$ZONECACHEDAY | xargs -0 rm -fv"
-    RUNCMD $CACHECLEANCMD
+    if [ $ZONECACHEDAY = 0 ]; then
+      CACHECLEANCMD="rm -fv $tDB"
+    else
+      CACHECLEANCMD="$FINDBIN $tDB -ctime +$ZONECACHEDAY | xargs -0 rm -fv"
+    fi
+
+    FORCERUNCMD $CACHECLEANCMD
 
     if [ -f $tDB ]; then
       NOTICE "Using existing $c zone cache"
@@ -142,7 +195,7 @@ function CREATEIPTCONFIG() {
 
     printf ":${CBCHAINDROP} - [0:0]\n" >> ${CBRESTORE}
 
-    if $LOGDROP; then
+    if [ $LOGDROP = true]; then
       printf "%s ${CBCHAINDROP} -j LOG --log-prefix \"$LOGDROPMSG\"\n" "-A" >> ${CBRESTORE}.tmp
     fi
 
@@ -187,12 +240,24 @@ function IPTLOADCONFIG() {
   printf "Country block instituted for: %s\n" "$ISO"
 }
 
-if $DRYRUNME; then
-  NOTICE "Dryrun active. No iptables rules will be added."
+if [ $DRYRUNME = true ]; then
+  NOTICE "Dryrun active. No iptables commands will be run."
 fi
 
 # lock down permissions
 umask 077
+
+if [ ! -n "$ISO" ]; then
+  ERROR "Invalid country list"
+fi
+
+if [[ $DLPROVIDER -ne "ipdeny" || $DLPROVIDER -ne "ipinfodb" ]]; then
+  ERROR "Invalid List Provider: $DLPROVIDER"
+fi
+
+if [ ! -n "$ZONEROOTDIR" ]; then
+  ERROR "Invalid zone directory"
+fi
 
 # create directory if needed
 mkdir -p -v $ZONEROOTDIR
@@ -204,5 +269,9 @@ fi
 IPTCLEANUP
 UPDATEZONECACHE
 IPTLOADCONFIG
+
+if [ $DRYRUNME = true ]; then
+  NOTICE "Dryrun active. No iptables commands were run."
+fi
 
 exit 0
