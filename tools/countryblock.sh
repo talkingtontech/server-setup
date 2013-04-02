@@ -1,5 +1,5 @@
 #!/bin/bash
-# IPTables Country Block Script v1.4.2
+# IPTables Country Block Script v1.4.4
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # block all traffic from ISO code (eg ch for China)
@@ -9,7 +9,7 @@ ISO="af cn hk kr pe pk sg tw vn"
 DLPROVIDER="ipdeny"
 
 # allowed ports
-#ALLOWPORTS=80,443
+ALLOWPORTS=""
 
 # log drops?
 LOGDROP=false
@@ -51,21 +51,25 @@ This script grabs a list of country IPs in CIDR format from database provider
 and then builds sets of octet optimized DROP rules for iptables.
 
 OPTIONS:
-  -h      Show this message
-  -c      Countries to block (ISO; lowercase, space seperated)
-  -d      Debug mode
-  -l      Log DROPs
-  -p      List Provider (ipdeny or ipinfodb) default: ipdeny
-  -t      Dryrun mode
-  -u      Force zone cache update
+  -h    Show this message
+  -a    Allow specific ports through (comma seperated)
+  -c    Countries to block (ISO; lowercase, space seperated)
+  -d    Debug mode
+  -l    Log DROPs
+  -p    List Provider (ipdeny or ipinfodb) default: ipdeny
+  -t    Dryrun mode
+  -u    Force zone cache update
 EOF
 }
 
-while getopts "hc:dlp:tu" opt; do
+while getopts "ha:c:dlp:tu" opt; do
   case $opt in
     h)
       USAGE
       exit 1
+      ;;
+    a)
+      ALLOWPORTS="$OPTARG"
       ;;
     c)
       ISO="$OPTARG"
@@ -182,7 +186,7 @@ function CREATEIPTCONFIG() {
   printf "%s $CBCHAIN -m state --state RELATED,ESTABLISHED -j ACCEPT\n" "-I">> ${CBRESTORE}.tmp
 
   if [ "Z${ALLOWPORTS}" = "Z" ] ; then
-    NOTICE "Blocking all traffic from country - no ports allowed"
+    NOTICE "Blocking all traffic from countries - no ports allowed"
   else
     printf "%s $CBCHAIN -p tcp -m multiport --dports ${ALLOWPORTS} -j RETURN\n" "-I">> ${CBRESTORE}.tmp
   fi
@@ -236,8 +240,7 @@ function IPTLOADCONFIG() {
   CREATEIPTCONFIG
   RUNCMD ${IPTRESTOREBIN} -n ${CBRESTORE}
 
-  echo
-  printf "Country block instituted for: %s\n" "$ISO"
+  NOTICE "Country block instituted for: $ISO"
 }
 
 if [ $DRYRUNME = true ]; then
