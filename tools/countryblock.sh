@@ -1,5 +1,5 @@
 #!/bin/bash
-# IPTables Country Block Script v1.4.4
+# IPTables Country Block Script v1.4.5
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # block all traffic from ISO code (eg ch for China)
@@ -157,9 +157,9 @@ function UPDATEZONECACHE() {
     fi
 
     if [ $ZONECACHEDAY = 0 ]; then
-      CACHECLEANCMD="rm -fv $tDB"
+      CACHECLEANCMD="$FINDBIN $tDB -type f -exec rm -fv {} \;"
     else
-      CACHECLEANCMD="$FINDBIN $tDB -ctime +$ZONECACHEDAY | xargs -0 rm -fv"
+      CACHECLEANCMD="$FINDBIN $tDB -type f -ctime +$ZONECACHEDAY -exec rm -fv {} \;"
     fi
 
     FORCERUNCMD $CACHECLEANCMD
