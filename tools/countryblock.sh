@@ -1,5 +1,5 @@
 #!/bin/bash
-# IPTables Country Block Script v1.3.4
+# IPTables Country Block Script v1.3.5
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # block all traffic from ISO code (eg ch for China)
@@ -37,7 +37,7 @@ ZONECACHEDAY=3
 IPCOUNT=0
 
 # iptables chain used for rules
-CBCHAIN="countrydrop"
+CBCHAIN="countryblock"
 
 # iptables config file
 CBRESTORE="/etc/sysconfig/iptables.cb"
@@ -137,8 +137,8 @@ function CREATEIPTCONFIG() {
   for c in $ISO; do
     tDB="$ZONEROOTDIR/$DLPROVIDER-$c.zone"
 
-    LOGDROPMSG="iptables: $c-country-drop: "
-    CBCHAINDROP="$c-$CBCHAIN"
+    LOGDROPMSG="iptables: $c-countryblock: "
+    CBCHAINDROP="$c-$CBCHAIN-drop"
 
     printf ":${CBCHAINDROP} - [0:0]\n" >> ${CBRESTORE}
 
