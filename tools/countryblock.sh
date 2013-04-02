@@ -40,7 +40,7 @@ IPCOUNT=0
 CBCHAIN="countryblock"
 
 # iptables config file
-CBRESTORE="/etc/sysconfig/iptables.cb"
+CBRESTORE="/etc/countryblock.rules"
 
 # where to get rules from
 DLROOTIPINFODB="http://ipinfodb.com/country_query.php"
