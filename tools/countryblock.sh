@@ -1,5 +1,5 @@
 #!/bin/bash
-# IPTables Country Block Script v1.4.5
+# IPTables Country Block Script v1.4.6
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # block all traffic from ISO code (eg ch for China)
@@ -157,12 +157,13 @@ function UPDATEZONECACHE() {
     fi
 
     if [ $ZONECACHEDAY = 0 ]; then
-      CACHECLEANCMD="$FINDBIN $tDB -type f -exec rm -fv {} \;"
+      CACHECLEANCMD="$FINDBIN $tDB -type f -print0"
     else
-      CACHECLEANCMD="$FINDBIN $tDB -type f -ctime +$ZONECACHEDAY -exec rm -fv {} \;"
+      CACHECLEANCMD="$FINDBIN $tDB -type f -ctime +$ZONECACHEDAY -print0"
     fi
 
-    FORCERUNCMD $CACHECLEANCMD
+    DEBUG "$CACHECLEANCMD | xargs -0 rm -fv"
+    $CACHECLEANCMD | xargs -0 rm -fv
 
     if [ -f $tDB ]; then
       NOTICE "Using existing $c zone cache"
@@ -185,7 +186,7 @@ function CREATEIPTCONFIG() {
 
   printf "%s $CBCHAIN -m state --state RELATED,ESTABLISHED -j ACCEPT\n" "-I">> ${CBRESTORE}.tmp
 
-  if [ "Z${ALLOWPORTS}" = "Z" ] ; then
+  if [ ! -n "$ALLOWPORTS" ] ; then
     NOTICE "Blocking all traffic from countries - no ports allowed"
   else
     printf "%s $CBCHAIN -p tcp -m multiport --dports ${ALLOWPORTS} -j RETURN\n" "-I">> ${CBRESTORE}.tmp
@@ -199,7 +200,7 @@ function CREATEIPTCONFIG() {
 
     printf ":${CBCHAINDROP} - [0:0]\n" >> ${CBRESTORE}
 
-    if [ $LOGDROP = true]; then
+    if [ $LOGDROP = true ]; then
       printf "%s ${CBCHAINDROP} -j LOG --log-prefix \"$LOGDROPMSG\"\n" "-A" >> ${CBRESTORE}.tmp
     fi
 
