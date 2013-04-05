@@ -1,80 +1,121 @@
-#!/bin/sh
-# MySQL Backup Script v1.1.1
+#!/bin/bash
+# MySQL Backup Script v1.2.2
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # Space separated list of databases
-dblist="db_name_1"
+DBLIST=""
 
 # Backup to this directory
-backupdir=/root/backups/mysql
+BACKUPDIR=/root/backups/mysql
 
 # Number of days to keep
-numdays=14
+NUMDAYS=14
 
 # Put client credentials into $HOME/.my.cnf
-dumpcmd="mysqldump --lock-tables --databases"
-gzipcmd="gzip"
+DUMPCMD="mysqldump --lock-tables --databases"
+GZIPCMD="gzip"
 
 # Backup date format
-backupdate=`date +_%Y%m%d_%H%M`
+BACKUPDATE=`date +_%Y%m%d_%H%M`
+
+function USAGE() {
+cat << EOF
+usage: $0 options
+
+This script backs up a list of MySQL databases.
+
+OPTIONS:
+  -h    Show this message
+  -l    Databases to backup (space seperated)
+  -n    Number of days to keep backups
+EOF
+}
+
+while getopts "hl:n:" opt; do
+  case $opt in
+    h)
+      USAGE
+      exit 1
+      ;;
+    l)
+      DBLIST="$OPTARG"
+      ;;
+    n)
+      NUMDAYS=$OPTARG
+      ;;
+    \?)
+      USAGE
+      exit
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
+function ERROR() {
+  echo && echo "[error] $@"
+  exit 1
+}
+
+function NOTICE() {
+  echo && echo "[notice] $@"
+}
+
+function RUNCMD() {
+  echo $@
+  eval $@
+}
 
 # Sanity checks
-if [ ! -n "$dblist" ]; then
-  echo "Invalid DB List"
-  exit 1
+if [ ! -n "$DBLIST" ]; then
+  ERROR "Invalid database list"
 fi
 
-if [ ! -n "$backupdir" ]; then
-  echo "Invalid Backup Dir"
-  exit 1
+if [ ! -n "$BACKUPDIR" ]; then
+  ERROR "Invalid backup directory"
+fi
+
+if [[ ! $NUMDAYS =~ ^[0-9]+$ ]]; then
+  ERROR "Invalid number of days: $NUMDAYS"
+elif [ "$NUMDAYS" -eq "0" ]; then
+  ERROR "Number of days must be greater than zero"
 fi
 
 # Lock down permissions
 umask 077
 
 # Create directory if needed
-mkdir -p -v $backupdir 
-if [ ! -d $backupdir ]; then
-  echo "Invalid directory: $backupdir"
-  exit 1
+RUNCMD mkdir -p -v $BACKUPDIR
+
+if [ ! -d $BACKUPDIR ]; then
+  ERROR "Invalid directory: $BACKUPDIR"
 fi
 
-echo "Dumping MySQL Databases..."
+NOTICE "Dumping MySQL databases..."
 RC=0
 
-for database in $dblist; do
-  echo
-  echo "Dumping $database..."
-  echo "$dumpcmd $database | $gzipcmd > $backupdir/$database$backupdate.sql.gz"
-  $dumpcmd $database | $gzipcmd > "$backupdir/$database$backupdate.sql.gz"
-    
+for database in $DBLIST; do
+  NOTICE "Dumping $database..."
+  RUNCMD "$DUMPCMD $database | $GZIPCMD > $BACKUPDIR/$database$BACKUPDATE.sql.gz"
+
   RC=$?
   if [ $RC -gt 0 ]; then
     continue;
   fi
 done
 
-echo
-
 if [ $RC -gt 0 ]; then
-  echo "MySQL Dump failed!"
-  exit $RC
+  ERROR "MySQLDump failed!"
 else
-  findcmd="find $backupdir -name \"*.sql.gz\" -type f -mtime +$numdays -print0"
-  findxargs="xargs -0 rm -fv"
-  listcmd="ls -la $backupdir"
-  
-  echo "Removing Dumps Older Than $numdays Days..."
-  echo "$findcmd | $findxargs"
-  $findcmd | $findxargs
-  
-  echo
-  echo "Listing Backup Directory Contents..."
-  echo $listcmd
-  $listcmd
-  
-  echo
-  echo "MySQL Dump is complete!"
+  NOTICE "Removing dumps older than $NUMDAYS days..."
+  RUNCMD "find $BACKUPDIR -name \"*.sql.gz\" -type f -mtime +$NUMDAYS -print0 | xargs -0 rm -fv"
+
+  NOTICE "Listing backup directory contents..."
+  RUNCMD ls -la $BACKUPDIR
+
+  NOTICE "MySQLDump is complete!"
 fi
 
 exit 0
