@@ -6,7 +6,7 @@
 DBLIST=""
 
 # Backup to this directory
-BACKUPDIR=/root/backups/mysql
+BACKUPDIR=/backups/mysql
 
 # Number of days to keep
 NUMDAYS=14
