@@ -1,5 +1,5 @@
 #!/bin/bash
-# MySQL Backup Script v1.2.2
+# MySQL Backup Script v1.2.4
 # (c) 2013 Chris Talkington <chris@talkingontech.com>
 
 # Space separated list of databases
@@ -12,6 +12,8 @@ BACKUPDIR=/root/backups/mysql
 NUMDAYS=14
 
 # Put client credentials into $HOME/.my.cnf
+FINDCMD="find"
+MYSQLCMD="mysql"
 DUMPCMD="mysqldump --lock-tables --databases"
 GZIPCMD="gzip"
 
@@ -26,13 +28,17 @@ This script backs up a list of MySQL databases.
 
 OPTIONS:
   -h    Show this message
+  -a    Backup all databases
   -l    Databases to backup (space seperated)
   -n    Number of days to keep backups
 EOF
 }
 
-while getopts "hl:n:" opt; do
+while getopts "hal:n:" opt; do
   case $opt in
+    a)
+      DBLIST=""
+      ;;
     h)
       USAGE
       exit 1
@@ -70,7 +76,11 @@ function RUNCMD() {
 
 # Sanity checks
 if [ ! -n "$DBLIST" ]; then
-  ERROR "Invalid database list"
+  DBLIST=`$MYSQLCMD -N -s -e "show databases" | grep -viE '(information_schema|performance_schema|mysql|test)'`
+
+  if [ ! -n "$DBLIST" ]; then
+    ERROR "Invalid database list"
+  fi
 fi
 
 if [ ! -n "$BACKUPDIR" ]; then
@@ -110,7 +120,7 @@ if [ $RC -gt 0 ]; then
   ERROR "MySQLDump failed!"
 else
   NOTICE "Removing dumps older than $NUMDAYS days..."
-  RUNCMD "find $BACKUPDIR -name \"*.sql.gz\" -type f -mtime +$NUMDAYS -print0 | xargs -0 rm -fv"
+  RUNCMD "$FINDCMD $BACKUPDIR -name \"*.sql.gz\" -type f -mtime +$NUMDAYS -print0 | xargs -0 rm -fv"
 
   NOTICE "Listing backup directory contents..."
   RUNCMD ls -la $BACKUPDIR
