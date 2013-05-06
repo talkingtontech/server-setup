@@ -141,8 +141,6 @@ deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main
 deb-src http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main
 END
 
-  check_install apt-key python-software-properties
-
   apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
   apt-get -q -y update
 
