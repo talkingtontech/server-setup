@@ -3,12 +3,10 @@
 # inspired by lowendscript
 
 function check_install {
-  if [ -z "`which "$1" 2>/dev/null`" ]
-  then
+  if [ -z "`which "$1" 2>/dev/null`" ]; then
     executable=$1
     shift
-    while [ -n "$1" ]
-    do
+    while [ -n "$1" ]; do
       apt-get -q -y install "$1"
       print_info "$1 installed for $executable"
       shift
@@ -19,8 +17,7 @@ function check_install {
 }
 
 function check_remove {
-  if [ -n "`which "$1" 2>/dev/null`" ]
-  then
+  if [ -n "`which "$1" 2>/dev/null`" ]; then
     apt-get -q -y remove --purge "$2"
     print_info "$2 removed"
   else
@@ -30,13 +27,11 @@ function check_remove {
 
 function check_sanity {
   # Do some sanity checking.
-  if [ $(/usr/bin/id -u) != "0" ]
-  then
+  if [ $(/usr/bin/id -u) != "0" ]; then
     die 'Must be run by root user'
   fi
 
-  if [ ! -f /etc/debian_version ]
-  then
+  if [ ! -f /etc/debian_version ]; then
     die "Distribution is not supported"
   fi
 }
@@ -49,11 +44,12 @@ function die {
 function get_password() {
   # Check whether our local salt is present.
   SALT=/var/lib/random_setup_salt
-  if [ ! -f "$SALT" ]
-  then
+
+  if [ ! -f "$SALT" ]; then
     head -c 512 /dev/urandom > "$SALT"
     chmod 400 "$SALT"
   fi
+
   password=`(cat "$SALT"; echo $1) | md5sum | base64`
   echo ${password:0:13}
 }
@@ -85,15 +81,13 @@ function install_nano {
 
 function install_exim4 {
   # Need to stop sendmail as removing the package does not seem to stop it.
-  if [ -f /usr/lib/sm.bin/smtpd ]
-  then
+  if [ -f /usr/lib/sm.bin/smtpd ]; then
     invoke-rc.d sendmail stop
     check_remove /usr/lib/sm.bin/smtpd 'sendmail*'
   fi
 
   check_install mail exim4
-  if [ -f /etc/exim4/update-exim4.conf.conf ]
-  then
+  if [ -f /etc/exim4/update-exim4.conf.conf ]; then
     sed -i \
       "s/dc_eximconfig_configtype='local'/dc_eximconfig_configtype='internet'/" \
       /etc/exim4/update-exim4.conf.conf
@@ -202,8 +196,11 @@ END
 function configure_ssh {
   echo "UseDNS no" >> /etc/ssh/sshd_config
 
-  mkdir ~/.ssh && chmod 700 ~/.ssh
-  touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
+  mkdir -p ~/.ssh
+  chmod 700 ~/.ssh
+
+  touch ~/.ssh/authorized_keys
+  chmod 600 ~/.ssh/authorized_keys
 
   invoke-rc.d ssh restart
 }
