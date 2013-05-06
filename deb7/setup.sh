@@ -95,6 +95,22 @@ function install_exim4 {
   fi
 }
 
+function maybe_generate_mysql_password {
+  if [ -f /usr/bin/mysqladmin ]; then
+    # Generating a new password for the root user.
+    passwd=`get_password root@mysql`
+    mysqladmin password "$passwd"
+
+    cat > ~/.my.cnf <<END
+[client]
+user = root
+password = $passwd
+END
+
+    chmod 600 ~/.my.cnf
+  fi
+}
+
 function install_mysql {
   # Install the MySQL packages
   check_install mysqld mysql-server
@@ -112,19 +128,7 @@ ignore_builtin_innodb
 default_storage_engine=MyISAM
 END
 
-  invoke-rc.d mysql start
-
-  # Generating a new password for the root user.
-  passwd=`get_password root@mysql`
-  mysqladmin password "$passwd"
-
-  cat > ~/.my.cnf <<END
-[client]
-user = root
-password = $passwd
-END
-
-  chmod 600 ~/.my.cnf
+  maybe_generate_mysql_password
 }
 
 function install_mariadb {
@@ -138,19 +142,10 @@ END
   apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
   apt-get -q -y update
 
-  check_install mysql mariadb-server
+  mv /etc/mysql/my.cnf /etc/mysql/my.cnf.setupsave
+  check_install mysql "libmysqlclient18=5.5.30-mariadb1~wheezy" "mysql-common=5.5.30-mariadb1~wheezy" mariadb-server mariadb-client
 
-  # Generating a new password for the root user.
-  passwd=`get_password root@mysql`
-  mysqladmin password "$passwd"
-
-  cat > ~/.my.cnf <<END
-[client]
-user = root
-password = $passwd
-END
-
-  chmod 600 ~/.my.cnf
+  maybe_generate_mysql_password
 }
 
 function install_nginx {
