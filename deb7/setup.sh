@@ -142,10 +142,9 @@ END
   apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
   apt-get -q -y update
 
-  mv /etc/mysql/my.cnf /etc/mysql/my.cnf.setupsave
-  check_install mysql "libmysqlclient18=5.5.30-mariadb1~wheezy" "mysql-common=5.5.30-mariadb1~wheezy" mariadb-server mariadb-client
+  check_install mysql "mysql-common=5.5.30-mariadb1~wheezy libmysqlclient18=5.5.30-mariadb1~wheezy" mariadb-server mariadb-client
 
-  maybe_generate_mysql_password
+  #maybe_generate_mysql_password
 }
 
 function install_nginx {
