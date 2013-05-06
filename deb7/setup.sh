@@ -68,8 +68,8 @@ function print_warn {
 
 function install_dotdeb {
   cat > /etc/apt/sources.list.d/dotdeb.list <<END
-  deb http://mirror.us.leaseweb.net/dotdeb/ stable all
-  deb-src http://mirror.us.leaseweb.net/dotdeb/ stable all
+  deb http://mirror.us.leaseweb.net/dotdeb/ wheezy all
+  deb-src http://mirror.us.leaseweb.net/dotdeb/ wheezy all
 END
 
   wget -q -O - http://www.dotdeb.org/dotdeb.gpg | apt-key add -
