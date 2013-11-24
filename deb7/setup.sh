@@ -1,5 +1,5 @@
 #!/bin/bash
-# debian 7 setup script
+# debian 7 setup script v2.0
 # inspired by lowendscript
 
 function check_install {
@@ -67,10 +67,10 @@ function print_warn {
 }
 
 function install_dotdeb {
-  cat > /etc/apt/sources.list.d/dotdeb.list <<END
-  deb http://mirror.us.leaseweb.net/dotdeb/ wheezy all
-  deb-src http://mirror.us.leaseweb.net/dotdeb/ wheezy all
-END
+  LIST="/etc/apt/sources.list.d/dotdeb.list"
+
+  echo "deb http://mirror.us.leaseweb.net/dotdeb/ stable all" > $LIST
+  echo "deb-src http://mirror.us.leaseweb.net/dotdeb/ stable all" >> $LIST
 
   wget -q -O - http://www.dotdeb.org/dotdeb.gpg | apt-key add -
 }
@@ -79,83 +79,21 @@ function install_nano {
   check_install nano nano
 }
 
-function install_exim4 {
-  # Need to stop sendmail as removing the package does not seem to stop it.
-  if [ -f /usr/lib/sm.bin/smtpd ]; then
-    invoke-rc.d sendmail stop
-    check_remove /usr/lib/sm.bin/smtpd 'sendmail*'
-  fi
-
-  check_install mail exim4
-  if [ -f /etc/exim4/update-exim4.conf.conf ]; then
-    sed -i \
-      "s/dc_eximconfig_configtype='local'/dc_eximconfig_configtype='internet'/" \
-      /etc/exim4/update-exim4.conf.conf
-    invoke-rc.d exim4 restart
-  fi
-}
-
-function maybe_generate_mysql_password {
-  if [ -f /usr/bin/mysqladmin ]; then
-    # Generating a new password for the root user.
-    passwd=`get_password root@mysql`
-    mysqladmin password "$passwd"
-
-    cat > ~/.my.cnf <<END
-[client]
-user = root
-password = $passwd
-END
-
-    chmod 600 ~/.my.cnf
-  fi
-}
-
-function install_mysql {
-  # Install the MySQL packages
-  check_install mysqld mysql-server
-  check_install mysql mysql-client
-
-  # Install a low-end copy of the my.cnf to disable InnoDB
-  invoke-rc.d mysql stop
-
-  cat > /etc/mysql/conf.d/lowendbox.cnf <<END
-[mysqld]
-key_buffer = 8M
-query_cache_size = 0
-
-ignore_builtin_innodb
-default_storage_engine=MyISAM
-END
-
-  maybe_generate_mysql_password
-}
-
 function install_mariadb {
-  cat > /etc/apt/sources.list.d/MariaDB.list <<END
-# MariaDB 5.5 repository list - created 2013-05-05 05:09 UTC
-# http://mariadb.org/mariadb/repositories/
-deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main
-deb-src http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main
-END
+  LIST="/etc/apt/sources.list.d/MariaDB.list"
+
+  if [ COUNTRY == "US" ]; then
+    echo "deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" > $LIST
+    echo "deb-src http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" >> $LIST
+  elif [ COUNTRY == "AU" ] then
+    echo "deb http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" > $LIST
+    echo "deb-src http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" >> $LIST
+  fi
 
   apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
   apt-get -q -y update
 
-  check_install mysql "mysql-common=5.5.30-mariadb1~wheezy libmysqlclient18=5.5.30-mariadb1~wheezy" mariadb-server mariadb-client
-
-  #maybe_generate_mysql_password
-}
-
-function install_nginx {
-  check_install nginx nginx
-  invoke-rc.d nginx restart
-}
-
-function install_php {
-  check_install php5 php5-common php5-cli php5-fpm php5-curl php5-gd php5-imap php5-mcrypt php5-mysql php-pear
-
-  mkdir -p /var/run/php5-fpm
+  check_install mysql "mysql-common=5.5.34+maria-1~wheezy" "libmysqlclient18=5.5.34+maria-1~wheezy" mariadb-server mariadb-client
 }
 
 function remove_unneeded {
@@ -181,10 +119,15 @@ function update_timezone {
 }
 
 function update_sources {
-  cat > /etc/apt/sources.list <<END
-deb http://ftp.us.debian.org/debian wheezy main contrib non-free
-deb http://security.debian.org/debian-security wheezy/updates main contrib non-free
-END
+  LIST="/etc/apt/sources.list"
+
+  if [ COUNTRY == "US" ]; then
+    echo "deb http://ftp.us.debian.org/debian stable main contrib non-free" > $LIST
+    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
+  elif [ COUNTRY == "AU" ] then
+    echo "deb http://ftp.au.debian.org/debian stable main contrib non-free" > $LIST
+    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
+  fi
 }
 
 function configure_ssh {
@@ -204,22 +147,56 @@ function configure_ssh {
 ########################################################################
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
+SCRIPTNAME=$(basename $0)
+COUNTRY="US"
+
 check_sanity
+
+function usage() {
+  cat << EOF
+usage: $SCRIPTNAME cmd [-option]
+
+This script automates the initial setup of a debian install.
+
+COMMANDS:
+  minimal    handles the basics of any new install
+  system     minimal plus removal of un-needed packages
+  dotdeb     sets up the dotdeb apt sources
+  mysql      sets up mariadb apt sources and installs mariadb
+
+OPTIONS:
+  -h    Show this message
+  -c    Set the country ie US/AU (defaults to US)
+EOF
+}
+
+while getopts "hc:" opt; do
+  case $opt in
+    h)
+      usage
+      exit 1
+      ;;
+    c)
+      if [ "$OPTARG" == "AU" ]; then
+        COUNTRY="AU"
+      else
+        die "Unknown Country"
+      fi
+      ;;
+    \?)
+      usage
+      exit
+      ;;
+    :)
+      die "Option -$OPTARG requires an argument."
+      ;;
+  esac
+done
+
+
 case "$1" in
-exim4)
-  install_exim4
-  ;;
 mysql)
-  install_mysql
-  ;;
-mariadb)
   install_mariadb
-  ;;
-nginx)
-  install_nginx
-  ;;
-php)
-  install_php
   ;;
 dotdeb)
   install_dotdeb
@@ -237,19 +214,11 @@ system)
 minimal)
   update_timezone
   update_sources
-  install_dotdeb
   update_upgrade
   install_nano
   configure_ssh
   ;;
-custom)
-  print_warn "please update setup script to use this"
-  ;;
 *)
-  echo 'Usage:' `basename $0` '[option]'
-  echo 'Available options:'
-  for option in minimal system custom dotdeb exim4 mysql mariadb nginx php; do
-    echo '  -' $option
-  done
+  usage
   ;;
 esac
