@@ -85,7 +85,7 @@ function install_mariadb {
   if [ COUNTRY == "US" ]; then
     echo "deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" > $LIST
     echo "deb-src http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" >> $LIST
-  elif [ COUNTRY == "AU" ] then
+  elif [ COUNTRY == "AU" ]; then
     echo "deb http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" > $LIST
     echo "deb-src http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" >> $LIST
   fi
@@ -124,7 +124,7 @@ function update_sources {
   if [ COUNTRY == "US" ]; then
     echo "deb http://ftp.us.debian.org/debian stable main contrib non-free" > $LIST
     echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
-  elif [ COUNTRY == "AU" ] then
+  elif [ COUNTRY == "AU" ]; then
     echo "deb http://ftp.au.debian.org/debian stable main contrib non-free" > $LIST
     echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
   fi
