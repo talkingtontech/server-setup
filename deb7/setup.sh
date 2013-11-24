@@ -1,6 +1,9 @@
 #!/bin/bash
-# debian 7 setup script v2.0
+# debian 7 setup script v2.1
 # inspired by lowendscript
+
+SCRIPTNAME=$(basename $0)
+COUNTRY="US"
 
 function check_install {
   if [ -z "`which "$1" 2>/dev/null`" ]; then
@@ -54,6 +57,18 @@ function get_password() {
   echo ${password:0:13}
 }
 
+function set_country() {
+  if [ "$@" == "US" ]; then
+    COUNTRY="US"
+  elif [ "$@" == "AU" ]; then
+    COUNTRY="AU"
+  else
+    print_warn "unknown country; defaulting to US"
+  fi
+
+  print_info "country set to: $COUNTRY"
+}
+
 function print_info {
   echo -n -e '\e[1;36m'
   echo -n $1
@@ -82,10 +97,10 @@ function install_nano {
 function install_mariadb {
   LIST="/etc/apt/sources.list.d/MariaDB.list"
 
-  if [ COUNTRY == "US" ]; then
+  if [ "$COUNTRY" == "US" ]; then
     echo "deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" > $LIST
     echo "deb-src http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" >> $LIST
-  elif [ COUNTRY == "AU" ]; then
+  elif [ "$COUNTRY" == "AU" ]; then
     echo "deb http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" > $LIST
     echo "deb-src http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" >> $LIST
   fi
@@ -121,10 +136,10 @@ function update_timezone {
 function update_sources {
   LIST="/etc/apt/sources.list"
 
-  if [ COUNTRY == "US" ]; then
+  if [ "$COUNTRY" == "US" ]; then
     echo "deb http://ftp.us.debian.org/debian stable main contrib non-free" > $LIST
     echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
-  elif [ COUNTRY == "AU" ]; then
+  elif [ "$COUNTRY" == "AU" ]; then
     echo "deb http://ftp.au.debian.org/debian stable main contrib non-free" > $LIST
     echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
   fi
@@ -141,14 +156,6 @@ function configure_ssh {
 
   invoke-rc.d ssh restart
 }
-
-########################################################################
-# START OF PROGRAM
-########################################################################
-export PATH=/bin:/usr/bin:/sbin:/usr/sbin
-
-SCRIPTNAME=$(basename $0)
-COUNTRY="US"
 
 check_sanity
 
@@ -177,11 +184,7 @@ while getopts "hc:" opt; do
       exit 1
       ;;
     c)
-      if [ "$OPTARG" == "AU" ]; then
-        COUNTRY="AU"
-      else
-        die "Unknown Country"
-      fi
+      set_country $OPTARG
       ;;
     \?)
       usage
@@ -193,32 +196,33 @@ while getopts "hc:" opt; do
   esac
 done
 
+shift $(( ${OPTIND} - 1 ))
 
 case "$1" in
-mysql)
-  install_mariadb
-  ;;
-dotdeb)
-  install_dotdeb
-  update_upgrade
-  ;;
-system)
-  update_timezone
-  update_sources
-  install_dotdeb
-  remove_unneeded
-  update_upgrade
-  install_nano
-  configure_ssh
-  ;;
-minimal)
-  update_timezone
-  update_sources
-  update_upgrade
-  install_nano
-  configure_ssh
-  ;;
-*)
-  usage
+  mysql)
+    install_mariadb
+    ;;
+  dotdeb)
+    install_dotdeb
+    update_upgrade
+    ;;
+  system)
+    update_timezone
+    update_sources
+    install_dotdeb
+    remove_unneeded
+    update_upgrade
+    install_nano
+    configure_ssh
+    ;;
+  minimal)
+    update_timezone
+    update_sources
+    update_upgrade
+    install_nano
+    configure_ssh
+    ;;
+  *)
+    usage
   ;;
 esac
