@@ -95,7 +95,7 @@ function install_nano {
 }
 
 function install_mariadb {
-  LIST="/etc/apt/sources.list.d/MariaDB.list"
+  LIST="/etc/apt/sources.list.d/mariadb.list"
 
   if [ "$COUNTRY" == "US" ]; then
     echo "deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" > $LIST
@@ -108,7 +108,7 @@ function install_mariadb {
   apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
   apt-get -q -y update
 
-  check_install mysql "mysql-common=5.5.34+maria-1~wheezy" "libmysqlclient18=5.5.34+maria-1~wheezy" mariadb-server mariadb-client
+  check_install mysql mariadb-server mariadb-client mariadb-common libmariadbclient18
 }
 
 function remove_unneeded {
