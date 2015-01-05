@@ -96,6 +96,7 @@ function install_nano {
 
 function install_mariadb {
   LIST="/etc/apt/sources.list.d/mariadb.list"
+  PREF="/etc/apt/preferences.d/mariadb.pref"
 
   if [ "$COUNTRY" == "US" ]; then
     echo "deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/debian wheezy main" > $LIST
@@ -104,6 +105,8 @@ function install_mariadb {
     echo "deb http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" > $LIST
     echo "deb-src http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian wheezy main" >> $LIST
   fi
+
+  echo -e "Package: *\nPin: release o=MariaDB\nPin-Priority: 1005" > $PREF
 
   apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
   apt-get -q -y update
@@ -135,14 +138,23 @@ function update_timezone {
 
 function update_sources {
   LIST="/etc/apt/sources.list"
+  SECLIST="/etc/apt/sources.list.d/security.list"
+  SECPREF="/etc/apt/preferences.d/security.pref"
+  STABLIST="/etc/apt/sources.list.d/stable.list"
+  STABPREF="/etc/apt/preferences.d/stable.pref"
+
+  echo "" > $LIST
 
   if [ "$COUNTRY" == "US" ]; then
-    echo "deb http://ftp.us.debian.org/debian stable main contrib non-free" > $LIST
-    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
+    echo "deb http://ftp.us.debian.org/debian stable main contrib non-free" > $STABLIST
+    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" > $SECLIST
   elif [ "$COUNTRY" == "AU" ]; then
-    echo "deb http://ftp.au.debian.org/debian stable main contrib non-free" > $LIST
-    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
+    echo "deb http://ftp.au.debian.org/debian stable main contrib non-free" > $STABLIST
+    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" > $SECLIST
   fi
+
+  echo -e "Package: *\nPin: release a=stable\nPin-Priority: 995" > $STABPREF
+  echo -e "Package: *\nPin: release l=Debian-Security\nPin-Priority: 1000" > $SECPREF
 }
 
 function configure_ssh {
