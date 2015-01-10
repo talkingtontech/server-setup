@@ -138,23 +138,17 @@ function update_timezone {
 
 function update_sources {
   LIST="/etc/apt/sources.list"
-  SECLIST="/etc/apt/sources.list.d/security.list"
-  SECPREF="/etc/apt/preferences.d/security.pref"
-  STABLIST="/etc/apt/sources.list.d/stable.list"
   STABPREF="/etc/apt/preferences.d/stable.pref"
 
-  echo "" > $LIST
-
   if [ "$COUNTRY" == "US" ]; then
-    echo "deb http://ftp.us.debian.org/debian stable main contrib non-free" > $STABLIST
-    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" > $SECLIST
+    echo "deb http://ftp.us.debian.org/debian stable main contrib non-free" > $LIST
+    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
   elif [ "$COUNTRY" == "AU" ]; then
-    echo "deb http://ftp.au.debian.org/debian stable main contrib non-free" > $STABLIST
-    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" > $SECLIST
+    echo "deb http://ftp.au.debian.org/debian stable main contrib non-free" > $LIST
+    echo "deb http://security.debian.org/debian-security stable/updates main contrib non-free" >> $LIST
   fi
 
-  echo -e "Package: *\nPin: release a=stable\nPin-Priority: 995" > $STABPREF
-  echo -e "Package: *\nPin: release l=Debian-Security\nPin-Priority: 1000" > $SECPREF
+  echo -e "Package: *\nPin: release a=stable\nPin-Priority: 900" > $STABPREF
 }
 
 function configure_ssh {
